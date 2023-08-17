@@ -30,14 +30,9 @@ function app<T extends { new (...args: any[]): {} }>(constructor: T) {
   })();
 }
 
-function onClass<T extends { new (...args: any[]): {} }>(constructor: T) {
-  log("decorator onClass: " + constructor.name);
-  return class extends constructor {
-    constructor(...args: any[]) {
-      super(...args);
-      //console.log("this.name");
-    }
-  };
+function onClass(constructorFunction) {
+  log("decorator onClass: " + constructorFunction.name);
+  BeanFactory.putBean(constructorFunction, new constructorFunction());
 }
 
 function bean(
@@ -54,9 +49,14 @@ function bean(
   BeanFactory.putBean(returnType, target[propertyName]);
 }
 
-function autoware(target: any, propertyKey: string): void {
-  console.log("decorator autoware: " + propertyKey);
-  target[propertyKey] = "autoware value";
+function autoware(target: any, propertyName: string): void {
+  let type = Reflect.getMetadata("design:type", target, propertyName);
+  Object.defineProperty(target, propertyName, {
+    get: function myProperty() {
+      const beanObject = BeanFactory.getBean(type);
+      return beanObject();
+    },
+  });
 }
 
 function inject(): any {
@@ -83,4 +83,33 @@ function log(message?: any, ...optionalParams: any[]) {
   }
 }
 
-export { onClass, bean, autoware, inject, log, app };
+function before(constructorFunction, methodName: string) {
+  const targetBean = BeanFactory.getBean(constructorFunction);
+  return function (target, propertyKey: string) {
+    const currentMethod = targetBean[methodName];
+    Object.assign(targetBean, {
+      [methodName]: function (...args) {
+        target[propertyKey](...args);
+        log("========== before ==========");
+        return currentMethod.apply(targetBean, args);
+      },
+    });
+  };
+}
+
+function after(constructorFunction, methodName: string) {
+  const targetBean = BeanFactory.getBean(constructorFunction);
+  return function (target, propertyKey: string) {
+    const currentMethod = targetBean[methodName];
+    Object.assign(targetBean, {
+      [methodName]: function (...args) {
+        const result = currentMethod.apply(targetBean, args);
+        const afterResult = target[propertyKey](result);
+        log("========== after ==========");
+        return afterResult ?? result;
+      },
+    });
+  };
+}
+
+export { onClass, bean, autoware, inject, log, app, before, after };

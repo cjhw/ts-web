@@ -1,4 +1,6 @@
 import * as express from "express";
+import BeanFactory from "./bean-factory.class";
+import { log } from "./speed";
 const routerMapper = {
   get: {},
   post: {},
@@ -17,9 +19,16 @@ function setRouter(app: express.Application) {
   }
 }
 
-function GetMapping(value) {
+function GetMapping(value: string) {
   return function (target, propertyKey: string) {
-    routerMapper["get"][value] = target[propertyKey];
+    routerMapper["get"][value] = (...args) => {
+      log(target.constructor.name + " " + propertyKey);
+      let getBean = BeanFactory.getBean(target.constructor);
+
+      log("getBean: " + getBean);
+
+      return getBean[propertyKey](...args);
+    };
   };
 }
 
