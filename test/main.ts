@@ -1,16 +1,11 @@
-import { log } from "../src/speed";
-import * as walkSync from "walk-sync";
+import ExpressServer from "../src/default/express-server.class";
+import { app, log } from "../src/speed";
 
-const srcDir = process.cwd() + "/src";
-const srcPaths = walkSync(srcDir, { globs: ["**/*.ts"] });
-for (let p of srcPaths) {
-  import(srcDir + "/" + p);
+@app
+class Main {
+  public main() {
+    const server = new ExpressServer();
+    server.start(8080);
+    log("start application");
+  }
 }
-
-const testDir = process.cwd() + "/test";
-const testPaths = walkSync(testDir, { globs: ["**/*.ts"] });
-for (let p of testPaths) {
-  import(testDir + "/" + p);
-}
-
-log("Main file running...");
