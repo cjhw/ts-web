@@ -19,29 +19,23 @@ function setRouter(app: express.Application) {
   }
 }
 
-function GetMapping(value: string) {
-  return function (target, propertyKey: string) {
-    routerMapper["get"][value] = (...args) => {
-      log(target.constructor.name + " " + propertyKey);
-      let getBean = BeanFactory.getBean(target.constructor);
-
-      log("getBean: " + getBean);
-
-      return getBean[propertyKey](...args);
+function mapperFunction(method: string, value: string) {
+  return (target: any, propertyKey: string) => {
+    routerMapper[method][value] = (req, res, next) => {
+      const routerBean = BeanFactory.getBean(target.constructor);
+      const testResult = routerBean[propertyKey](req, res, next);
+      if (typeof testResult === "object") {
+        res.json(testResult);
+      } else if (typeof testResult !== "undefined") {
+        res.send(testResult);
+      }
+      return testResult;
     };
   };
 }
 
-function PostMapping(value: string) {
-  return function (target, propertyKey: string) {
-    routerMapper["post"][value] = target[propertyKey];
-  };
-}
-
-function RequestMapping(value: string) {
-  return function (target, propertyKey: string) {
-    routerMapper["all"][value] = target[propertyKey];
-  };
-}
+const GetMapping = (value: string) => mapperFunction("get", value);
+const PostMapping = (value: string) => mapperFunction("post", value);
+const RequestMapping = (value: string) => mapperFunction("all", value);
 
 export { GetMapping, PostMapping, RequestMapping, setRouter };
