@@ -1,10 +1,13 @@
 import * as express from "express";
 import * as consolidate from "consolidate";
 import ServerFactory from "../factory/server-factory.class";
-import { bean, log } from "../speed";
+import { bean, log, value } from "../speed";
 import { setRouter } from "../route-mapping.decorator";
 
 export default class ExpressServer extends ServerFactory {
+  @value("view")
+  public view: string;
+
   @bean
   public getSever(): ServerFactory {
     const server = new ExpressServer();
@@ -25,11 +28,7 @@ export default class ExpressServer extends ServerFactory {
   }
 
   private setDefaultMiddleware() {
-    const viewConfig = {
-      engine: "mustache",
-      path: "/test/views",
-      suffix: "html",
-    };
+    const viewConfig = this.view;
     this.app.engine(viewConfig["suffix"], consolidate[viewConfig["engine"]]);
     this.app.set("view engine", viewConfig["suffix"]);
     this.app.set("views", process.cwd() + viewConfig["path"]);
