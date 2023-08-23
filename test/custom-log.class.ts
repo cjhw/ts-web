@@ -21,4 +21,8 @@ export default class CustomLog extends LogFactory {
   public log(message?: any, ...optionalParams: any[]): void {
     this.logger.log(message, ...optionalParams);
   }
+
+  public error(message?: any, ...optionalParams: any[]): void {
+    this.logger.error(message, ...optionalParams);
+  }
 }
