@@ -2,6 +2,7 @@ import { log, onClass } from "../src/speed";
 import {
   GetMapping,
   PostMapping,
+  jwt,
   upload,
 } from "../src/route-mapping.decorator";
 
@@ -34,7 +35,8 @@ export default class SecondPage {
     res.send("upload success");
   }
 
-  @GetMapping("/form")
+  @jwt({ secret: "shhhhhhared-secret", algorithms: ["HS256"] })
+  @PostMapping("/form")
   form(req, res) {
     res.render("upload");
   }

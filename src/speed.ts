@@ -46,7 +46,8 @@ function app<T extends { new (...args: any[]): {} }>(constructor: T) {
 
 function onClass(constructorFunction) {
   log("decorator onClass: " + constructorFunction.name);
-  BeanFactory.putBean(constructorFunction, new constructorFunction());
+  BeanFactory.putObject(constructorFunction, new constructorFunction());
+  console.log(BeanFactory);
 }
 
 function bean(
@@ -59,8 +60,12 @@ function bean(
     target,
     propertyName
   );
-  log("decorator bean, the return Type is: " + returnType.name);
-  BeanFactory.putBean(returnType, target[propertyName]);
+  const targetObject = new target.constructor();
+  BeanFactory.putBean(returnType, {
+    target: target,
+    propertyKey: propertyName,
+    factory: targetObject[propertyName](),
+  });
 }
 
 function value(configPath: string): any {
@@ -89,9 +94,9 @@ function value(configPath: string): any {
 function autoware(target: any, propertyName: string): void {
   let type = Reflect.getMetadata("design:type", target, propertyName);
   Object.defineProperty(target, propertyName, {
-    get: function myProperty() {
-      const beanObject = BeanFactory.getBean(type);
-      return beanObject();
+    get: () => {
+      const targetObject = BeanFactory.getBean(type);
+      return targetObject["factory"];
     },
   });
 }
@@ -111,17 +116,16 @@ function inject(): any {
 }
 
 function log(message?: any, ...optionalParams: any[]) {
-  const logBean = BeanFactory.getBean(LogFactory);
-  if (logBean) {
-    const logObject = logBean();
-    logObject.log(message, ...optionalParams);
+  const logObject = BeanFactory.getBean(LogFactory);
+  if (logObject) {
+    logObject["factory"].log(message, ...optionalParams);
   } else {
     console.log(message, ...optionalParams);
   }
 }
 
 function before(constructorFunction, methodName: string) {
-  const targetBean = BeanFactory.getBean(constructorFunction);
+  const targetBean = BeanFactory.getObject(constructorFunction);
   return function (target, propertyKey: string) {
     const currentMethod = targetBean[methodName];
     Object.assign(targetBean, {
@@ -135,7 +139,7 @@ function before(constructorFunction, methodName: string) {
 }
 
 function after(constructorFunction, methodName: string) {
-  const targetBean = BeanFactory.getBean(constructorFunction);
+  const targetBean = BeanFactory.getObject(constructorFunction);
   return function (target, propertyKey: string) {
     const currentMethod = targetBean[methodName];
     Object.assign(targetBean, {

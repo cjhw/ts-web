@@ -1,3 +1,4 @@
+import * as jwttoken from "jsonwebtoken";
 import { log, onClass } from "../src/speed";
 import { GetMapping } from "../src/route-mapping.decorator";
 
@@ -31,5 +32,11 @@ export default class FirstPage {
   @GetMapping("/first/renderTest")
   public renderTest(req: any, res: any) {
     res.render("index", { name: "zzz" });
+  }
+
+  @GetMapping("/login")
+  login() {
+    const token = jwttoken.sign({ foo: "bar" }, "shhhhhhared-secret");
+    return token;
   }
 }
