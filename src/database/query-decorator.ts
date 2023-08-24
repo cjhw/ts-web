@@ -2,6 +2,7 @@ import { createPool, ResultSetHeader } from "mysql2";
 import { config } from "../speed";
 const pool = createPool(config("mysql")).promise();
 const paramMetadataKey = Symbol("param");
+const resultTypeMap = new Map<string, object>();
 
 function Insert(sql: string) {
   return (target, propertyKey: string, descriptor: PropertyDescriptor) => {
@@ -44,8 +45,38 @@ function Select(sql: string) {
         );
       }
       const [rows] = await pool.query(newSql, sqlValues);
-      return rows;
+      if (Object.keys(rows).length === 0) {
+        return;
+      }
+
+      const records = [];
+      const resultType = resultTypeMap.get(
+        [target.constructor.name, propertyKey].toString()
+      );
+      for (const rowIndex in rows) {
+        const entity = Object.create(resultType);
+        Object.getOwnPropertyNames(resultType).forEach(function (propertyRow) {
+          if (rows[rowIndex].hasOwnProperty(propertyRow)) {
+            Object.defineProperty(
+              entity,
+              propertyRow,
+              Object.getOwnPropertyDescriptor(rows[rowIndex], propertyRow)
+            );
+          }
+        });
+        records.push(entity);
+      }
+      return records;
     };
+  };
+}
+
+function ResultType(dataClass) {
+  return function (target, propertyKey: string) {
+    resultTypeMap.set(
+      [target.constructor.name, propertyKey].toString(),
+      new dataClass()
+    );
   };
 }
 
@@ -117,4 +148,4 @@ function convertSQLParams(
   return [decoratorSQL, queryValues];
 }
 
-export { Insert, Update, Update as Delete, Select, Param };
+export { Insert, Update, Update as Delete, Select, Param, ResultType };
