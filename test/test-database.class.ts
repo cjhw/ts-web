@@ -1,19 +1,25 @@
+import CacheFactory from "../src/factory/cache-factory.class";
 import {
   Insert,
   Update,
   Select,
   Param,
   ResultType,
+  cache,
 } from "../src/database/query-decorator";
 import { GetMapping } from "../src/route-mapping.decorator";
-import { onClass, log } from "../src/speed";
+import { onClass, log, autoware } from "../src/speed";
 import UserDto from "./entities/user-dto.class";
 
 @onClass
 export default class TestDatabase {
+  @autoware
+  private cacheBean: CacheFactory;
+
   @GetMapping("/db/insert")
   async insert(req, res) {
-    const newId = await this.addRow("new name 21", 25);
+    const id = req.query.id || 1;
+    const newId = await this.addRow("new name " + id, id);
     log("Insert newId: " + newId);
     res.send("Insert success");
   }
@@ -21,8 +27,8 @@ export default class TestDatabase {
   @GetMapping("/db/insert2")
   async insertByObject(req, res) {
     const newId = await this.addRowByObject({
-      id: 23,
-      name: "new name 22",
+      id: 25,
+      name: "new name 25",
     });
     log("Insert newId: " + newId);
     res.send("Insert success");
@@ -56,6 +62,17 @@ export default class TestDatabase {
     res.send(users);
   }
 
+  @GetMapping("/db/set-cache")
+  testCache(req, res) {
+    this.cacheBean.set("test", req.query.value || "test");
+    res.send("set cache success");
+  }
+
+  @GetMapping("/db/get-cache")
+  displayCache(req, res) {
+    res.send(this.cacheBean.get("test"));
+  }
+
   @Insert("Insert into `user` (id, name) values (#{id}, #{name})")
   private async addRow(
     @Param("name") newName: string,
@@ -71,6 +88,7 @@ export default class TestDatabase {
   @Select("Select * from `user`")
   private async selectRow() {}
 
+  @cache(1800)
   @Select("Select * from `user` where id = #{id}")
   private async findRow(@Param("id") id: number) {}
 

@@ -38,6 +38,9 @@ dependencies:
   mysql2:
     specifier: ^3.6.0
     version: 3.6.0
+  node-cache:
+    specifier: ^5.1.2
+    version: 5.1.2
   reflect-metadata:
     specifier: ^0.1.13
     version: 0.1.13
@@ -283,6 +286,11 @@ packages:
     dependencies:
       function-bind: 1.1.1
       get-intrinsic: 1.2.1
+    dev: false
+
+  /clone@2.1.2:
+    resolution: {integrity: sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==}
+    engines: {node: '>=0.8'}
     dev: false
 
   /colors@1.4.0:
@@ -920,6 +928,13 @@ packages:
   /negotiator@0.6.3:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
+    dev: false
+
+  /node-cache@5.1.2:
+    resolution: {integrity: sha512-t1QzWwnk4sjLWaQAS8CHgOJ+RAfmHpxFWmc36IWTiWHQfs0w5JDMBS1b1ZxQteo0vVVuWJvIUKHDkkeK7vIGCg==}
+    engines: {node: '>= 8.0.0'}
+    dependencies:
+      clone: 2.1.2
     dev: false
 
   /object-inspect@1.12.3:

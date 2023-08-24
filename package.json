@@ -28,6 +28,7 @@
     "multiparty": "^4.2.3",
     "mustache": "^4.2.0",
     "mysql2": "^3.6.0",
+    "node-cache": "^5.1.2",
     "reflect-metadata": "^0.1.13",
     "serve-favicon": "^2.5.0",
     "tracer": "^1.1.6",
