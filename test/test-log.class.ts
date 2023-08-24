@@ -1,8 +1,8 @@
-import { onClass, log } from "../src/speed";
+import { component, log } from "../src/speed";
 
-@onClass
+@component
 export default class TestLog {
   constructor() {
-    log("TestLog constructor");
+    //log("TestLog constructor");
   }
 }

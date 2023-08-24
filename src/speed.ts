@@ -1,11 +1,14 @@
 import "reflect-metadata";
 import * as fs from "fs";
 import * as walkSync from "walk-sync";
-import BeanFactory from "./bean-factory.class";
 import LogFactory from "./factory/log-factory.class";
 
 let globalConfig = {};
+const resourceObjects = new Map<string, object>();
+const beanMapper: Map<string, any> = new Map<string, any>();
+const objectMapper: Map<string, any> = new Map<string, any>();
 const configPath = process.cwd() + "/test/config.json";
+
 if (fs.existsSync(configPath)) {
   globalConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   const nodeEnv = process.env.NODE_ENV || "development";
@@ -17,6 +20,7 @@ if (fs.existsSync(configPath)) {
     );
   }
 }
+
 function app<T extends { new (...args: any[]): {} }>(constructor: T) {
   const srcDir = process.cwd() + "/src";
   const srcFiles = walkSync(srcDir, { globs: ["**/*.ts"] });
@@ -38,38 +42,41 @@ function app<T extends { new (...args: any[]): {} }>(constructor: T) {
     } catch (err) {
       console.error(err);
     }
-    log("main start");
+    //log("main start")
     const main = new constructor();
     main["main"]();
   })();
 }
 
 function config(node: string) {
-  return globalConfig[node] ?? {};
+  return globalConfig[node] || null;
 }
 
-function onClass(constructorFunction) {
-  log("decorator onClass: " + constructorFunction.name);
-  BeanFactory.putObject(constructorFunction, new constructorFunction());
-  console.log(BeanFactory);
+function component(constructorFunction) {
+  objectMapper.set(constructorFunction.name, new constructorFunction());
 }
 
-function bean(
-  target: any,
-  propertyName: string,
-  descriptor: PropertyDescriptor
-) {
+function getComponent(constructorFunction) {
+  return objectMapper.get(constructorFunction.name);
+}
+
+function bean(target: any, propertyName: string) {
   let returnType = Reflect.getMetadata(
     "design:returntype",
     target,
     propertyName
   );
   const targetObject = new target.constructor();
-  BeanFactory.putBean(returnType, {
+  beanMapper.set(returnType.name, {
     target: target,
     propertyKey: propertyName,
     factory: targetObject[propertyName](),
   });
+}
+
+function getBean(mappingClass: Function): any {
+  const bean = beanMapper.get(mappingClass.name);
+  return bean["factory"];
 }
 
 function value(configPath: string): any {
@@ -95,41 +102,58 @@ function value(configPath: string): any {
   };
 }
 
-function autoware(target: any, propertyName: string): void {
-  let type = Reflect.getMetadata("design:type", target, propertyName);
-  Object.defineProperty(target, propertyName, {
+function autoware(target: any, propertyKey: string): void {
+  const type = Reflect.getMetadata("design:type", target, propertyKey);
+  Object.defineProperty(target, propertyKey, {
     get: () => {
-      const targetObject = BeanFactory.getBean(type);
+      const targetObject = beanMapper.get(type.name);
+      if (targetObject === undefined) {
+        const resourceKey = [
+          target.constructor.name,
+          propertyKey,
+          type.name,
+        ].toString();
+        if (!resourceObjects[resourceKey]) {
+          resourceObjects[resourceKey] = new type();
+        }
+        return resourceObjects[resourceKey];
+      }
       return targetObject["factory"];
     },
   });
 }
 
-function inject(): any {
-  console.log("decorator inject, outside the return.");
+function resource(...args): any {
   return (target: any, propertyKey: string) => {
-    console.log("decorator inject, in the return, propertyKey: " + propertyKey);
-    let type = Reflect.getMetadata("design:type", target, propertyKey);
-    console.log("decorator inject, in the return, type.name: " + type.name);
-    return {
-      get: function () {
-        return "decorator inject, in the return get function";
+    const type = Reflect.getMetadata("design:type", target, propertyKey);
+    Object.defineProperty(target, propertyKey, {
+      get: () => {
+        const resourceKey = [
+          target.constructor.name,
+          propertyKey,
+          type.name,
+        ].toString();
+        if (!resourceObjects[resourceKey]) {
+          resourceObjects[resourceKey] = new type(...args);
+        }
+        return resourceObjects[resourceKey];
       },
-    };
+    });
   };
 }
 
 function log(message?: any, ...optionalParams: any[]) {
-  const logObject = BeanFactory.getBean(LogFactory);
+  const logObject = beanMapper.get(LogFactory.name);
   if (logObject) {
     logObject["factory"].log(message, ...optionalParams);
+    console.log(beanMapper);
   } else {
     console.log(message, ...optionalParams);
   }
 }
 
 function error(message?: any, ...optionalParams: any[]) {
-  const logObject = BeanFactory.getBean(LogFactory);
+  const logObject = beanMapper.get(LogFactory.name);
   if (logObject) {
     logObject["factory"].error(message, ...optionalParams);
   } else {
@@ -138,7 +162,7 @@ function error(message?: any, ...optionalParams: any[]) {
 }
 
 function before(constructorFunction, methodName: string) {
-  const targetBean = BeanFactory.getObject(constructorFunction);
+  const targetBean = getComponent(constructorFunction);
   return function (target, propertyKey: string) {
     const currentMethod = targetBean[methodName];
     Object.assign(targetBean, {
@@ -152,7 +176,7 @@ function before(constructorFunction, methodName: string) {
 }
 
 function after(constructorFunction, methodName: string) {
-  const targetBean = BeanFactory.getObject(constructorFunction);
+  const targetBean = getComponent(constructorFunction);
   return function (target, propertyKey: string) {
     const currentMethod = targetBean[methodName];
     Object.assign(targetBean, {
@@ -167,15 +191,17 @@ function after(constructorFunction, methodName: string) {
 }
 
 export {
-  onClass,
+  component,
   bean,
-  autoware,
-  inject,
+  resource,
   log,
-  error,
   app,
   before,
   after,
   value,
+  error,
   config,
+  autoware,
+  getBean,
+  getComponent,
 };

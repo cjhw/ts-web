@@ -1,32 +1,27 @@
-import { log, onClass } from "../src/speed";
-import {
-  GetMapping,
-  PostMapping,
-  jwt,
-  upload,
-} from "../src/route-mapping.decorator";
+import { log, component } from "../src/speed";
+import { getMapping, postMapping, upload, jwt } from "../src/route.decorator";
 
-@onClass
+@component
 export default class SecondPage {
-  @GetMapping("/second/setCookie")
+  @getMapping("/second/setCookie")
   setCookiePage(req, res) {
     res.cookie("name", "zzz");
     return "setCookie";
   }
 
-  @GetMapping("/second/getCookie")
+  @getMapping("/second/getCookie")
   getCookiePage(req, res) {
     const cookieName = req.cookies.name;
     return "getCookie: " + cookieName;
   }
 
-  @GetMapping("/second/testSession")
+  @getMapping("/second/testSession")
   testForSession(req, res) {
     req.session.view = req.session.view ? req.session.view + 1 : 1;
     return "testForSession: " + req.session.view;
   }
 
-  @PostMapping("/upload")
+  @postMapping("/upload")
   @upload
   public upload(req, res) {
     const files = req.files;
@@ -36,12 +31,12 @@ export default class SecondPage {
   }
 
   @jwt({ secret: "shhhhhhared-secret", algorithms: ["HS256"] })
-  @PostMapping("/form")
+  @postMapping("/form")
   form(req, res) {
     res.render("upload");
   }
 
-  @GetMapping("/second/testError")
+  @getMapping("/second/testError")
   testError(req, res) {
     throw new Error("Test Error");
   }

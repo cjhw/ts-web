@@ -6,7 +6,7 @@ import * as cookieParser from "cookie-parser";
 import * as expressSession from "express-session";
 import ServerFactory from "../factory/server-factory.class";
 import { bean, error, log, value } from "../speed";
-import { setRouter } from "../route-mapping.decorator";
+import { setRouter } from "../route.decorator";
 
 export default class ExpressServer extends ServerFactory {
   @value("view")
