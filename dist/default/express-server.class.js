@@ -19,8 +19,10 @@ const expressSession = require("express-session");
 const connectRedis = require("connect-redis");
 const server_factory_class_1 = require("../factory/server-factory.class");
 const route_decorator_1 = require("../route.decorator");
+const typespeed_1 = require("../typespeed");
 const core_decorator_1 = require("../core.decorator");
 const redis_class_1 = require("./redis.class");
+const authentication_factory_class_1 = require("../factory/authentication-factory.class");
 class ExpressServer extends server_factory_class_1.default {
     getSever() {
         const server = new ExpressServer();
@@ -30,14 +32,12 @@ class ExpressServer extends server_factory_class_1.default {
     setMiddleware(middleware) {
         this.middlewareList.push(middleware);
     }
-    start(port) {
+    start(port, callback) {
         this.middlewareList.forEach(middleware => {
             this.app.use(middleware);
         });
         this.setDefaultMiddleware();
-        this.app.listen(port, () => {
-            (0, core_decorator_1.log)("server start at port: " + port);
-        });
+        return this.app.listen(port, callback);
     }
     setDefaultMiddleware() {
         this.app.use(express.urlencoded({ extended: true }));
@@ -59,10 +59,6 @@ class ExpressServer extends server_factory_class_1.default {
             }
             this.app.use(expressSession(sessionConfig));
         }
-        if (this.static) {
-            const staticPath = process.cwd() + this.static;
-            this.app.use(express.static(staticPath));
-        }
         if (this.favicon) {
             const faviconPath = process.cwd() + this.favicon;
             this.app.use(serveFavicon(faviconPath));
@@ -73,7 +69,13 @@ class ExpressServer extends server_factory_class_1.default {
         if (this.cookieConfig) {
             this.app.use(cookieParser(this.cookieConfig["secret"] || undefined, this.cookieConfig["options"] || {}));
         }
+        this.app.use(this.authentication.preHandle);
+        if (this.static) {
+            const staticPath = process.cwd() + this.static;
+            this.app.use(express.static(staticPath));
+        }
         (0, route_decorator_1.setRouter)(this.app);
+        this.app.use(this.authentication.afterCompletion);
         const errorPageDir = __dirname + "/pages";
         this.app.use((req, res) => {
             (0, core_decorator_1.error)("404 not found, for page: " + req.url);
@@ -107,37 +109,41 @@ class ExpressServer extends server_factory_class_1.default {
     }
 }
 __decorate([
-    (0, core_decorator_1.value)("view"),
+    (0, typespeed_1.value)("view"),
     __metadata("design:type", String)
 ], ExpressServer.prototype, "view", void 0);
 __decorate([
-    (0, core_decorator_1.value)("static"),
+    (0, typespeed_1.value)("static"),
     __metadata("design:type", String)
 ], ExpressServer.prototype, "static", void 0);
 __decorate([
-    (0, core_decorator_1.value)("favicon"),
+    (0, typespeed_1.value)("favicon"),
     __metadata("design:type", String)
 ], ExpressServer.prototype, "favicon", void 0);
 __decorate([
-    (0, core_decorator_1.value)("compression"),
+    (0, typespeed_1.value)("compression"),
     __metadata("design:type", Object)
 ], ExpressServer.prototype, "compression", void 0);
 __decorate([
-    (0, core_decorator_1.value)("cookie"),
+    (0, typespeed_1.value)("cookie"),
     __metadata("design:type", Object)
 ], ExpressServer.prototype, "cookieConfig", void 0);
 __decorate([
-    (0, core_decorator_1.value)("session"),
+    (0, typespeed_1.value)("session"),
     __metadata("design:type", Object)
 ], ExpressServer.prototype, "session", void 0);
 __decorate([
-    (0, core_decorator_1.value)("redis"),
+    (0, typespeed_1.value)("redis"),
     __metadata("design:type", Object)
 ], ExpressServer.prototype, "redisConfig", void 0);
 __decorate([
     core_decorator_1.autoware,
-    __metadata("design:type", redis_class_1.default)
+    __metadata("design:type", redis_class_1.Redis)
 ], ExpressServer.prototype, "redisClient", void 0);
+__decorate([
+    core_decorator_1.autoware,
+    __metadata("design:type", authentication_factory_class_1.default)
+], ExpressServer.prototype, "authentication", void 0);
 __decorate([
     core_decorator_1.bean,
     __metadata("design:type", Function),

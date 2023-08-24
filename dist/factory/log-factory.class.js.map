@@ -1,1 +1,1 @@
-{"version":3,"file":"log-factory.class.js","sourceRoot":"","sources":["../../src/factory/log-factory.class.ts"],"names":[],"mappings":";;AAAA,MAA8B,UAAU;CAGvC;AAHD,6BAGC"}
+{"version":3,"file":"log-factory.class.js","sourceRoot":"","sources":["../../src/factory/log-factory.class.ts"],"names":[],"mappings":";;AAAA,MAA8B,UAAU;IAC7B,GAAG,CAAC,OAAa,EAAE,GAAG,cAAqB;QAC9C,OAAO,CAAC,GAAG,CAAC,OAAO,EAAE,GAAG,cAAc,CAAC,CAAC;IAC5C,CAAC;IACM,KAAK,CAAC,OAAa,EAAE,GAAG,cAAqB;QAChD,OAAO,CAAC,KAAK,CAAC,OAAO,EAAE,GAAG,cAAc,CAAC,CAAC;IAC9C,CAAC;CACJ;AAPD,6BAOC"}

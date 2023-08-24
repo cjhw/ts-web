@@ -1,11 +1,10 @@
 {
     "view": {
-        "engine": "pug",
-        "path": "./views",
+        "engine": "mustache",
+        "path": "./src/views",
         "suffix": "html"
     },
-    "static": "/static",
-    "favicon": "/static/favicon.ico",
+
     "compression": {
         "level": 9
     },
@@ -42,5 +41,10 @@
         "host": "localhost",
         "port": "6379",
         "db": 0
+    },
+    "jwt" : {
+        "secret": "shhhhhhared-secret", 
+        "algorithms": ["HS256"],
+        "ignore": ["/first", "/second/testSession"]
     }
 }

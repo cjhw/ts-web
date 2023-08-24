@@ -8,8 +8,10 @@ import * as expressSession from "express-session";
 import * as connectRedis from "connect-redis";
 import ServerFactory from "../factory/server-factory.class";
 import { setRouter } from "../route.decorator";
-import { bean, log, value, error, autoware } from "../core.decorator";
-import Redis from "./redis.class";
+import { value } from "../typespeed";
+import { bean, log, error, autoware } from "../core.decorator";
+import { Redis } from "./redis.class";
+import AuthenticationFactory from "../factory/authentication-factory.class";
 
 export default class ExpressServer extends ServerFactory {
 
@@ -37,6 +39,9 @@ export default class ExpressServer extends ServerFactory {
     @autoware
     private redisClient: Redis;
 
+    @autoware
+    public authentication: AuthenticationFactory;
+
     @bean
     public getSever(): ServerFactory {
         const server = new ExpressServer();
@@ -48,15 +53,14 @@ export default class ExpressServer extends ServerFactory {
         this.middlewareList.push(middleware);
     }
 
-    public start(port: number) {
+    public start(port: number, callback?: Function): any {
         this.middlewareList.forEach(middleware => {
             this.app.use(middleware);
         });
 
         this.setDefaultMiddleware();
-        this.app.listen(port, () => {
-            log("server start at port: " + port);
-        });
+ 
+        return this.app.listen(port, callback);
     }
 
     private setDefaultMiddleware() {
@@ -82,11 +86,6 @@ export default class ExpressServer extends ServerFactory {
             this.app.use(expressSession(sessionConfig));
         }
 
-        if (this.static) {
-            const staticPath = process.cwd() + this.static;
-            this.app.use(express.static(staticPath))
-        }
-
         if (this.favicon) {
             const faviconPath = process.cwd() + this.favicon;
             this.app.use(serveFavicon(faviconPath));
@@ -100,8 +99,15 @@ export default class ExpressServer extends ServerFactory {
             this.app.use(cookieParser(this.cookieConfig["secret"] || undefined, this.cookieConfig["options"] || {}));
         }
 
-        setRouter(this.app);
+        this.app.use(this.authentication.preHandle);
 
+        if (this.static) {
+            const staticPath = process.cwd() + this.static;
+            this.app.use(express.static(staticPath))
+        }
+        setRouter(this.app);
+        this.app.use(this.authentication.afterCompletion);
+        
         const errorPageDir = __dirname + "/pages";
         this.app.use((req, res) => {
             error("404 not found, for page: " + req.url);
