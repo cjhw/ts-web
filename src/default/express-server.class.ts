@@ -1,118 +1,133 @@
+import * as fs from "fs";
 import * as express from "express";
 import * as consolidate from "consolidate";
 import * as serveFavicon from "serve-favicon";
 import * as compression from "compression";
 import * as cookieParser from "cookie-parser";
 import * as expressSession from "express-session";
+import * as connectRedis from "connect-redis";
 import ServerFactory from "../factory/server-factory.class";
-import { bean, error, log, value } from "../speed";
 import { setRouter } from "../route.decorator";
+import { bean, log, value, error, autoware } from "../core.decorator";
+import Redis from "./redis.class";
 
 export default class ExpressServer extends ServerFactory {
-  @value("view")
-  public view: string;
 
-  @value("static")
-  private static: string;
+    @value("view")
+    public view: string;
 
-  @value("favicon")
-  private favicon: string;
+    @value("static")
+    private static: string;
 
-  @value("compression")
-  private compression: object;
+    @value("favicon")
+    private favicon: string;
 
-  @value("cookie")
-  private cookieConfig: object;
+    @value("compression")
+    private compression: object;
 
-  @value("session")
-  private session: object;
+    @value("cookie")
+    private cookieConfig: object;
 
-  @bean
-  public getSever(): ServerFactory {
-    const server = new ExpressServer();
-    server.app = express();
-    return server;
-  }
-  public setMiddleware(middleware: any) {
-    this.middlewareList.push(middleware);
-  }
-  public start(port: number) {
-    this.middlewareList.forEach((middleware) => {
-      this.app.use(middleware);
-    });
-    this.setDefaultMiddleware();
-    this.app.listen(port, () => {
-      log("server start at port: " + port);
-    });
-  }
+    @value("session")
+    private session: object;
 
-  private setDefaultMiddleware() {
-    if (this.view) {
-      const viewConfig = this.view;
-      this.app.engine(viewConfig["suffix"], consolidate[viewConfig["engine"]]);
-      this.app.set("view engine", viewConfig["suffix"]);
-      this.app.set("views", process.cwd() + viewConfig["path"]);
+    @value("redis")
+    private redisConfig: object;
+
+    @autoware
+    private redisClient: Redis;
+
+    @bean
+    public getSever(): ServerFactory {
+        const server = new ExpressServer();
+        server.app = express();
+        return server;
     }
 
-    if (this.session) {
-      const sessionConfig = this.session;
-      if (sessionConfig["trust proxy"] === 1) {
-        this.app.set("trust proxy", 1);
-      }
-      this.app.use(expressSession(sessionConfig));
+    public setMiddleware(middleware: any) {
+        this.middlewareList.push(middleware);
     }
 
-    if (this.static) {
-      const staticPath = process.cwd() + this.static;
-      this.app.use(express.static(staticPath));
+    public start(port: number) {
+        this.middlewareList.forEach(middleware => {
+            this.app.use(middleware);
+        });
+
+        this.setDefaultMiddleware();
+        this.app.listen(port, () => {
+            log("server start at port: " + port);
+        });
     }
 
-    if (this.favicon) {
-      const faviconPath = process.cwd() + this.favicon;
-      this.app.use(serveFavicon(faviconPath));
+    private setDefaultMiddleware() {
+        this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(express.json());
+        if (this.view) {
+            const viewConfig = this.view;
+            this.app.engine(viewConfig["suffix"], consolidate[viewConfig["engine"]]);
+            this.app.set('view engine', viewConfig["suffix"]);
+            this.app.set('views', process.cwd() + viewConfig["path"]);
+        }
+
+        if (this.session) {
+            const sessionConfig = this.session;
+            if (sessionConfig["trust proxy"] === 1) {
+                this.app.set('trust proxy', 1);
+            }
+            if (this.redisConfig) {
+                const RedisStore = connectRedis(expressSession);
+                sessionConfig["store"] = new RedisStore({ client: this.redisClient });
+            }
+
+            this.app.use(expressSession(sessionConfig));
+        }
+
+        if (this.static) {
+            const staticPath = process.cwd() + this.static;
+            this.app.use(express.static(staticPath))
+        }
+
+        if (this.favicon) {
+            const faviconPath = process.cwd() + this.favicon;
+            this.app.use(serveFavicon(faviconPath));
+        }
+
+        if (this.compression) {
+            this.app.use(compression(this.compression));
+        }
+
+        if (this.cookieConfig) {
+            this.app.use(cookieParser(this.cookieConfig["secret"] || undefined, this.cookieConfig["options"] || {}));
+        }
+
+        setRouter(this.app);
+
+        const errorPageDir = __dirname + "/pages";
+        this.app.use((req, res) => {
+            error("404 not found, for page: " + req.url);
+            res.status(404);
+            if (req.accepts('html')) {
+                res.type('html').send(fs.readFileSync(errorPageDir + "/404.html", "utf-8"));
+            } else if (req.accepts('json')) {
+                res.json({ error: 'Not found' });
+            } else {
+                res.type('txt').send('Not found');
+            }
+        });
+
+        this.app.use((err, req, res, next) => {
+            if (!err) {
+                next();
+            }
+            error(err);
+            res.status(err.status || 500);
+            if (req.accepts('html')) {
+                res.type('html').send(fs.readFileSync(errorPageDir + "/500.html", "utf-8"));
+            } else if (req.accepts('json')) {
+                res.json({ error: 'Internal Server Error' });
+            } else {
+                res.type('txt').send('Internal Server Error');
+            }
+        });
     }
-
-    if (this.compression) {
-      this.app.use(compression(this.compression));
-    }
-
-    this.app.use(
-      cookieParser(
-        this.cookieConfig["secret"] || undefined,
-        this.cookieConfig["options"] || {}
-      )
-    );
-
-    setRouter(this.app);
-
-    this.app.use((req, res, next) => {
-      error("404 not found, for page: " + req.url);
-      if (req.accepts("html")) {
-        res.render(process.cwd() + "/static/error-page/404.html");
-      } else if (req.accepts("json")) {
-        // respond with json
-        res.json({ error: "Not found" });
-      } else {
-        // default to plain-text. send()
-        res.type("txt").send("Not found");
-      }
-    });
-
-    this.app.use((err, req, res, next) => {
-      if (!err) {
-        next();
-      }
-      error(err);
-      res.status(err.status || 500);
-      if (req.accepts("html")) {
-        res.render(process.cwd() + "/static/error-page/500.html");
-      } else if (req.accepts("json")) {
-        // respond with json
-        res.json({ error: "Internal Server Error" });
-      } else {
-        // default to plain-text. send()
-        res.type("txt").send("Internal Server Error");
-      }
-    });
-  }
 }

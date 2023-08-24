@@ -1,25 +1,21 @@
 import * as express from "express";
 import * as multiparty from "multiparty";
 import { expressjwt } from "express-jwt";
-import { getComponent } from "./speed";
+import { getComponent } from "./core.decorator";
 
 const routerMapper = {
-  get: {},
-  post: {},
-  all: {},
+  "get": {},
+  "post": {},
+  "all": {}
 };
 
 const routerMiddleware = {};
 function setRouter(app: express.Application) {
-  ["get", "post", "all"].forEach((method) => {
+  ["get", "post", "all"].forEach(method => {
     for (let key in routerMapper[method]) {
       let rounterFunction = routerMapper[method][key];
       if (routerMiddleware[rounterFunction["name"]]) {
-        let args: Array<any> = [
-          key,
-          ...routerMiddleware[rounterFunction["name"]],
-          rounterFunction["invoker"],
-        ];
+        let args: Array<any> = [key, ...routerMiddleware[rounterFunction["name"]], rounterFunction["invoker"]];
         app[method].apply(app, args);
       } else {
         app[method](key, rounterFunction["invoker"]);
@@ -31,20 +27,24 @@ function setRouter(app: express.Application) {
 function mapperFunction(method: string, value: string) {
   return (target: any, propertyKey: string) => {
     routerMapper[method][value] = {
-      path: value,
-      name: [target.constructor.name, propertyKey].toString(),
-      invoker: async (req, res) => {
+      "path": value,
+      "name": [target.constructor.name, propertyKey].toString(),
+      "invoker": async (req, res, next) => {
         const routerBean = getComponent(target.constructor);
-        const testResult = await routerBean[propertyKey](req, res);
-        if (typeof testResult === "object") {
-          res.json(testResult);
-        } else if (typeof testResult !== "undefined") {
-          res.send(testResult);
+        try {
+          const testResult = await routerBean[propertyKey](req, res);
+          if (typeof testResult === "object") {
+            res.json(testResult);
+          } else if (typeof testResult !== "undefined") {
+            res.send(testResult);
+          }
+          return testResult;
+        } catch (err) {
+          next(err)
         }
-        return testResult;
-      },
-    };
-  };
+      }
+    }
+  }
 }
 
 function upload(target: any, propertyKey: string) {
@@ -72,7 +72,7 @@ function jwt(jwtConfig) {
     } else {
       routerMiddleware[key] = [expressjwt(jwtConfig)];
     }
-  };
+  }
 }
 
 const getMapping = (value: string) => mapperFunction("get", value);
