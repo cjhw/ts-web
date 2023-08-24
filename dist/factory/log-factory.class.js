@@ -9,4 +9,3 @@ class LogFactory {
     }
 }
 exports.default = LogFactory;
-//# sourceMappingURL=log-factory.class.js.map

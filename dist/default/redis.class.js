@@ -79,4 +79,3 @@ process.once('SIGINT', () => {
     Redis.getInstanceOfRedis("sub") || Redis.getInstanceOfRedis("sub").disconnect();
     Redis.getInstanceOfRedis("pub") || Redis.getInstanceOfRedis("pub").disconnect();
 });
-//# sourceMappingURL=redis.class.js.map

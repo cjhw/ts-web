@@ -9,4 +9,3 @@ class AuthenticationFactory {
     }
 }
 exports.default = AuthenticationFactory;
-//# sourceMappingURL=authentication-factory.class.js.map

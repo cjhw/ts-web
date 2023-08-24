@@ -23,4 +23,3 @@ __decorate([
     __metadata("design:returntype", authentication_factory_class_1.default)
 ], DefaultAuthentication.prototype, "getAuthentication", null);
 exports.default = DefaultAuthentication;
-//# sourceMappingURL=default-authentication.class.js.map

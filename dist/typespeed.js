@@ -123,4 +123,3 @@ Object.defineProperty(exports, "redisSubscriber", { enumerable: true, get: funct
 var read_write_db_class_1 = require("./default/read-write-db.class");
 Object.defineProperty(exports, "ReadWriteDb", { enumerable: true, get: function () { return read_write_db_class_1.default; } });
 __exportStar(require("./default/rabbitmq.class"), exports);
-//# sourceMappingURL=typespeed.js.map

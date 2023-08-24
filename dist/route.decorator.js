@@ -179,4 +179,3 @@ const postMapping = (value) => mapperFunction("post", value);
 exports.postMapping = postMapping;
 const requestMapping = (value) => mapperFunction("all", value);
 exports.requestMapping = requestMapping;
-//# sourceMappingURL=route.decorator.js.map

@@ -87,4 +87,3 @@ function schedule(cronTime) {
     };
 }
 exports.schedule = schedule;
-//# sourceMappingURL=core.decorator.js.map
